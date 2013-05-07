@@ -12,12 +12,14 @@
 #import "SHDReporterViewController.h"
 #import "SHDBugReport.h"
 #import "SHDShakedownEmailReporter.h"
+#import "SHDButton.h"
 
 @interface SHDShakedown ()
 
 @property (nonatomic, strong) UIButton *reportButton;
-@property (nonatomic, strong) NSDictionary *userInfo;
+@property (nonatomic, strong) NSMutableDictionary *userInfo;
 @property (nonatomic, strong) NSMutableString *internalLog;
+@property (nonatomic, strong) UIWindow *buttonWindow;
 
 @end
 
@@ -27,9 +29,9 @@
     self = [super init];
     if (self) {
         [self resumeListeningForShakes];
-        [self displayButton];
         _reporter = [[SHDShakedownEmailReporter alloc] init];
         _internalLog = [[NSMutableString alloc] init];
+        _userInfo = [[NSMutableDictionary alloc] init];
     }
     return self;
 }
@@ -48,7 +50,7 @@
 #pragma mark - User info
 
 - (void)attachUserInformation:(NSDictionary *)info {
-    self.userInfo = info;
+    [self.userInfo addEntriesFromDictionary:info];
 }
 
 #pragma mark - Log data
@@ -76,9 +78,25 @@
 #pragma mark - Status Bar Button
 
 - (void)displayButton {
+    if ([[UIApplication sharedApplication] isStatusBarHidden] == NO) {
+        CGRect bounds = [[UIScreen mainScreen] bounds];
+        bounds.size.height = [[UIApplication sharedApplication] statusBarFrame].size.height;
+        UIWindow *window = [[UIWindow alloc] initWithFrame:bounds];
+        window.rootViewController = [[UIViewController alloc] initWithNibName:nil bundle:nil];
+        window.rootViewController.view.backgroundColor = [UIColor clearColor];
+        window.windowLevel = UIWindowLevelStatusBar;
+        SHDButton *button = [SHDButton buttonWithSHDType:SHDButtonTypeStatusBar];
+        button.frame = CGRectMake(80, 0, 17, 17);
+        [button setTitle:@"!" forState:UIControlStateNormal];
+        [window addSubview:button];
+        [window makeKeyAndVisible];
+        self.buttonWindow = window;
+        [button addTarget:self action:@selector(displayReporter) forControlEvents:UIControlEventTouchUpInside];
+    }
 }
 
 - (void)hideButton {
+    self.buttonWindow = nil;
 }
 
 #pragma mark - Programmatic Reporting
